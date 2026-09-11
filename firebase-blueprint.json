@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User account info for buyers, farmers, and FPOs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["buyer", "farmer"] },
+        "orgName": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "location": { "type": "string" },
+        "escrowBalance": { "type": "number" },
+        "verified": { "type": "boolean" },
+        "memberCount": { "type": "number" }
+      },
+      "required": ["id", "name", "role", "verified"]
+    },
+    "CropLot": {
+      "title": "Crop Lot",
+      "description": "Produce listing created by farmers or FPOs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "variety": { "type": "string" },
+        "cropCategory": { "type": "string" },
+        "farmerName": { "type": "string" },
+        "fpoName": { "type": "string" },
+        "farmerPhone": { "type": "string" },
+        "batchQuantityQtl": { "type": "number" },
+        "qualityScore": { "type": "number" },
+        "qualityGrade": { "type": "string" },
+        "moisturePct": { "type": "number" },
+        "pricePerQtl": { "type": "number" },
+        "mandiRate": { "type": "number" },
+        "premiumText": { "type": "string" },
+        "location": { "type": "string" },
+        "distanceKm": { "type": "number" },
+        "source": { "type": "string" },
+        "sourceLabel": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "certBadge": { "type": "string" },
+        "moistureBadge": { "type": "string" },
+        "keyMetricLabel": { "type": "string" },
+        "keyMetricValue": { "type": "string" },
+        "status": { "type": "string", "enum": ["available", "reserved", "sold"] },
+        "addedAt": { "type": "string" },
+        "harvestDate": { "type": "string" },
+        "grade": { "type": "string" },
+        "pickupOption": { "type": "string" },
+        "verifiedAssay": { "type": "boolean" },
+        "mandiRefPrice": { "type": "number" },
+        "paymentTerms": { "type": "string" },
+        "farmerLocation": { "type": "string" }
+      },
+      "required": ["id", "title", "cropCategory", "batchQuantityQtl", "pricePerQtl", "status"]
+    },
+    "PurchaseOrder": {
+      "title": "Purchase Order",
+      "description": "Escrow contract and procurement order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "lotId": { "type": "string" },
+        "cropTitle": { "type": "string" },
+        "cropCategory": { "type": "string" },
+        "quantityQtl": { "type": "number" },
+        "pricePerQtl": { "type": "number" },
+        "grossAmount": { "type": "number" },
+        "mandiTax": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "buyerId": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "farmerName": { "type": "string" },
+        "fpoName": { "type": "string" },
+        "farmerPhone": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "transitPassNo": { "type": "string" },
+        "destinationMandi": { "type": "string" },
+        "weighbridgeWeightQtl": { "type": "number" }
+      },
+      "required": ["id", "orderNumber", "lotId", "quantityQtl", "pricePerQtl", "totalAmount", "status"]
+    },
+    "MandiPrice": {
+      "title": "Mandi Price Benchmark",
+      "description": "Real-time mandi rates across APMC mandis",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "crop": { "type": "string" },
+        "mandiName": { "type": "string" },
+        "ratePerQtl": { "type": "number" },
+        "changePct": { "type": "number" },
+        "trend": { "type": "string" }
+      },
+      "required": ["crop", "mandiName", "ratePerQtl"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "entity": "UserProfile",
+      "description": "User profiles for buyers and farmers"
+    },
+    "crops": {
+      "entity": "CropLot",
+      "description": "Crop lot listings"
+    },
+    "orders": {
+      "entity": "PurchaseOrder",
+      "description": "Purchase orders and contracts"
+    },
+    "mandiPrices": {
+      "entity": "MandiPrice",
+      "description": "Mandi market prices"
+    }
+  }
+}

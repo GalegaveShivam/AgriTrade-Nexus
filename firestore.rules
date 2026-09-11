@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if request is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Crop produce listings
+    match /crops/{cropId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Purchase orders & contracts
+    match /orders/{orderId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Mandi price benchmarks
+    match /mandiPrices/{priceId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
