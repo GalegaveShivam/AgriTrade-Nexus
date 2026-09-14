@@ -59,7 +59,7 @@ export const PilotCohortModal: React.FC<PilotCohortModalProps> = ({
               Our rural aggregation desk officer will inspect your FPO cluster details and contact <span className="font-semibold">{contactName || 'the coordinator'}</span> within 4 business hours to dispatch certified moisture calibration kits.
             </p>
             <div className="p-3 bg-[#f2f3ff] rounded-xl text-xs font-mono text-[#1b4332]">
-              Registration Token: #RABI-PILOT-{Math.floor(10000 + Math.random() * 90000)}
+              Registration Token: #PROCURE-{Math.floor(10000 + Math.random() * 90000)}
             </div>
           </div>
         ) : (
@@ -67,10 +67,10 @@ export const PilotCohortModal: React.FC<PilotCohortModalProps> = ({
             <div className="mb-6 space-y-1">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ffdcc3] text-[#904d00] text-[11px] font-bold uppercase tracking-wider">
                 <span className="material-symbols-outlined text-[14px]">bolt</span>
-                <span>Rabi 2025 Priority Window</span>
+                <span>Direct Procurement Window</span>
               </div>
               <h2 className="font-headline text-2xl font-bold text-[#131b2e] pt-1">
-                Apply for Pilot Cohort Access
+                Apply for Direct Marketplace Access
               </h2>
               <p className="text-xs text-gray-500">
                 Join 42+ verified FPOs accessing direct institutional millers with zero listing fees.

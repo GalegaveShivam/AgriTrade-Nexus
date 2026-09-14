@@ -1,0 +1,58 @@
+[
+  {
+    "id": "buyer-01",
+    "username": "agrocore",
+    "password": "password123",
+    "name": "AgroCore Foods Ltd.",
+    "role": "buyer",
+    "orgName": "AgroCore Foods Ltd.",
+    "phone": "+91 91234-56789",
+    "email": "procurement@agrocore.com",
+    "location": "Indore Central Industrial Area, MP",
+    "escrowBalance": 4500000,
+    "verified": true,
+    "createdAt": "2026-09-01"
+  },
+  {
+    "id": "farmer-01",
+    "username": "rameshwar",
+    "password": "password123",
+    "name": "Rameshwar Patel",
+    "role": "farmer",
+    "orgName": "Malwa Kisan FPO",
+    "phone": "+91 98260-44120",
+    "email": "rameshwar.patel@malwafpo.in",
+    "location": "Gram Datoda Hub #4, Indore, MP",
+    "verified": true,
+    "memberCount": 850,
+    "createdAt": "2026-09-01"
+  },
+  {
+    "id": "buyer-02",
+    "username": "buyer",
+    "password": "buyer123",
+    "name": "Apex Craft Breweries Ltd.",
+    "role": "buyer",
+    "orgName": "Apex Craft Maltsters",
+    "phone": "+91 99887-66554",
+    "email": "trade@apexmalt.com",
+    "location": "Bhopal Agro Complex, MP",
+    "escrowBalance": 3200000,
+    "verified": true,
+    "createdAt": "2026-09-02"
+  },
+  {
+    "id": "farmer-02",
+    "username": "farmer",
+    "password": "farmer123",
+    "name": "Suresh Verma",
+    "role": "farmer",
+    "orgName": "Nimar Agro Farmer Producer Co.",
+    "phone": "+91 97551-88932",
+    "email": "suresh.verma@nimarfpo.in",
+    "location": "Ujjain Central Agro Hub, MP",
+    "verified": true,
+    "memberCount": 420,
+    "createdAt": "2026-09-02"
+  }
+]

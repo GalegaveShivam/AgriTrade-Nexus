@@ -381,7 +381,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
             </div>
             <div className="mt-4 text-[11px] font-semibold text-emerald-700 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <span>+₹1,12,000 this Rabi • 100% Settled</span>
+              <span>+₹1,12,000 this quarter • 100% Settled</span>
             </div>
           </div>
 
@@ -1085,7 +1085,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
                     onChange={(e) => setHarvestDate(e.target.value)}
                     className="w-full h-11 px-3.5 bg-gray-50 text-xs font-semibold text-gray-900 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#012d1d]"
                   />
-                  <span className="text-[10px] text-gray-400 mt-1 block">Fresh Rabi 2025 Harvest</span>
+                  <span className="text-[10px] text-gray-400 mt-1 block">Fresh Direct Harvest Batch</span>
                 </div>
               </div>
             </div>

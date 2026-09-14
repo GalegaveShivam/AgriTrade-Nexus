@@ -2,6 +2,7 @@ import { CropLot, MandiPriceItem, PurchaseOrder, User } from '../types';
 
 export const INITIAL_BUYER_USER: User = {
   id: 'buyer-01',
+  username: 'agrocore',
   name: 'AgroCore Foods Ltd.',
   role: 'buyer',
   orgName: 'AgroCore Foods Ltd.',
@@ -14,6 +15,7 @@ export const INITIAL_BUYER_USER: User = {
 
 export const INITIAL_FARMER_USER: User = {
   id: 'farmer-01',
+  username: 'rameshwar',
   name: 'Rameshwar Patel',
   role: 'farmer',
   orgName: 'Malwa Kisan FPO',

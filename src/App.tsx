@@ -7,16 +7,6 @@ import {
   INITIAL_MANDI_PRICES,
   INITIAL_ORDERS,
 } from './data/initialData';
-import {
-  seedInitialDataIfEmpty,
-  subscribeToCrops,
-  subscribeToOrders,
-  saveCropLotToFirestore,
-  updateCropPriceInFirestore,
-  deleteCropFromFirestore,
-  saveOrderToFirestore,
-  updateOrderStatusInFirestore,
-} from './lib/firebase';
 import { Header } from './components/Header';
 import { LandingPage } from './components/LandingPage';
 import { BuyerDashboard } from './components/BuyerDashboard';
@@ -27,6 +17,8 @@ import { OrderModal } from './components/OrderModal';
 import { CallFarmerModal } from './components/CallFarmerModal';
 import { AddCropModal } from './components/AddCropModal';
 import { PilotCohortModal } from './components/PilotCohortModal';
+import { WhyChooseUsModal } from './components/WhyChooseUsModal';
+import { AssayReportModal } from './components/AssayReportModal';
 import { Footer } from './components/Footer';
 
 export default function App() {
@@ -53,6 +45,21 @@ export default function App() {
 
   const [isAddCropOpen, setIsAddCropOpen] = useState(false);
   const [isPilotCohortOpen, setIsPilotCohortOpen] = useState(false);
+  const [isWhyChooseUsOpen, setIsWhyChooseUsOpen] = useState(false);
+
+  // Assay Modal State
+  const [isAssayModalOpen, setIsAssayModalOpen] = useState(false);
+  const [selectedCropForAssay, setSelectedCropForAssay] = useState<CropLot | null>(null);
+
+  const handleViewAssayReport = (crop?: CropLot) => {
+    if (crop) {
+      setSelectedCropForAssay(crop);
+      setIsAssayModalOpen(true);
+    } else if (crops.length > 0) {
+      setSelectedCropForAssay(crops[0]);
+      setIsAssayModalOpen(true);
+    }
+  };
 
   // Notification Toast state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -64,47 +71,31 @@ export default function App() {
     }, 4500);
   };
 
-  // Real-time Firestore synchronization & backend initial fetch
+  // Fetch initial crops and orders from backend
   useEffect(() => {
-    // Seed Firestore collections if freshly provisioned and empty
-    seedInitialDataIfEmpty();
-
-    // Subscribe to real-time updates from Firebase Firestore
-    const unsubscribeCrops = subscribeToCrops((liveCrops) => {
-      if (Array.isArray(liveCrops) && liveCrops.length > 0) {
-        setCrops(liveCrops);
-      }
-    });
-
-    const unsubscribeOrders = subscribeToOrders((liveOrders) => {
-      if (Array.isArray(liveOrders) && liveOrders.length > 0) {
-        setOrders(liveOrders);
-      }
-    });
-
-    // Also query backend API for fallback / server cache
     fetch('/api/crops')
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error('Failed to fetch crops');
+      })
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
-          setCrops((prev) => (prev.length === 0 ? data : prev));
+          setCrops(data);
         }
       })
-      .catch(() => {});
+      .catch((err) => console.log('Using initial crops fallback', err));
 
     fetch('/api/orders')
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error('Failed to fetch orders');
+      })
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
-          setOrders((prev) => (prev.length === 0 ? data : prev));
+          setOrders(data);
         }
       })
-      .catch(() => {});
-
-    return () => {
-      unsubscribeCrops();
-      unsubscribeOrders();
-    };
+      .catch((err) => console.log('Using initial orders fallback', err));
   }, []);
 
   // Authentication handlers
@@ -136,14 +127,26 @@ export default function App() {
   };
 
   const handleSwitchRole = () => {
-    if (!user || user.role === 'buyer') {
-      const switchedFarmer: User = INITIAL_FARMER_USER;
+    if (!user) {
+      handleOpenAuth('farmer');
+      return;
+    }
+    if (user.role === 'buyer') {
+      const switchedFarmer: User = {
+        ...user,
+        role: 'farmer',
+        memberCount: user.memberCount || 500,
+      };
       setUser(switchedFarmer);
       setCurrentView('farmer');
       setActiveTab('farmer-inventory');
-      showToast(`Switched view to Farmer / FPO: ${switchedFarmer.name}`);
+      showToast(`Switched view to Farmer: ${switchedFarmer.name}`);
     } else {
-      const switchedBuyer: User = INITIAL_BUYER_USER;
+      const switchedBuyer: User = {
+        ...user,
+        role: 'buyer',
+        escrowBalance: user.escrowBalance || 4500000,
+      };
       setUser(switchedBuyer);
       setCurrentView('buyer');
       setActiveTab('marketplace');
@@ -164,59 +167,42 @@ export default function App() {
 
   // Farmer Actions: Add Crop
   const handleAddCrop = async (newCrop: CropLot) => {
-    // Optimistic local update
-    setCrops((prev) => [newCrop, ...prev]);
-
-    // Persist to Firebase Firestore
+    // Send to backend
     try {
-      await saveCropLotToFirestore(newCrop);
-    } catch (err) {
-      console.warn('Firestore write error, falling back to server API', err);
-    }
-
-    // Persist to backend server API
-    try {
-      await fetch('/api/crops', {
+      const res = await fetch('/api/crops', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newCrop),
       });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.crop) {
+          setCrops((prev) => [json.crop, ...prev]);
+        } else {
+          setCrops((prev) => [newCrop, ...prev]);
+        }
+      } else {
+        setCrops((prev) => [newCrop, ...prev]);
+      }
     } catch {
-      // Handled
+      setCrops((prev) => [newCrop, ...prev]);
     }
     showToast(`Lot "${newCrop.title}" successfully assayed and listed on Mandi Grid!`);
   };
 
   // Farmer Actions: Remove Crop
   const handleRemoveCrop = async (cropId: string) => {
-    setCrops((prev) => prev.filter((c) => c.id !== cropId));
-
-    try {
-      await deleteCropFromFirestore(cropId);
-    } catch (err) {
-      console.warn('Firestore delete error', err);
-    }
-
     try {
       await fetch(`/api/crops/${cropId}`, { method: 'DELETE' });
     } catch {
       // ignore
     }
+    setCrops((prev) => prev.filter((c) => c.id !== cropId));
     showToast('Crop lot removed from marketplace.');
   };
 
   // Farmer Actions: Update Crop Price
   const handleUpdateCropPrice = async (cropId: string, newPrice: number) => {
-    setCrops((prev) =>
-      prev.map((c) => (c.id === cropId ? { ...c, pricePerQtl: newPrice } : c))
-    );
-
-    try {
-      await updateCropPriceInFirestore(cropId, newPrice);
-    } catch (err) {
-      console.warn('Firestore price update error', err);
-    }
-
     try {
       await fetch(`/api/crops/${cropId}`, {
         method: 'PATCH',
@@ -226,23 +212,14 @@ export default function App() {
     } catch {
       // ignore
     }
+    setCrops((prev) =>
+      prev.map((c) => (c.id === cropId ? { ...c, pricePerQtl: newPrice } : c))
+    );
     showToast(`Asking price updated to ₹${newPrice.toLocaleString()}/Qtl.`);
   };
 
   // Farmer Actions: Confirm Dispatch
   const handleConfirmDispatch = async (orderId: string) => {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId ? { ...o, status: 'weighbridge_verified' } : o
-      )
-    );
-
-    try {
-      await updateOrderStatusInFirestore(orderId, 'weighbridge_verified');
-    } catch (err) {
-      console.warn('Firestore order update error', err);
-    }
-
     try {
       await fetch(`/api/orders/${orderId}/status`, {
         method: 'PATCH',
@@ -252,6 +229,11 @@ export default function App() {
     } catch {
       // ignore
     }
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId ? { ...o, status: 'weighbridge_verified' } : o
+      )
+    );
     showToast('Weighbridge gross/tare verified! Payout release initiated via RTGS.');
   };
 
@@ -284,9 +266,7 @@ export default function App() {
   }) => {
     const { crop, quantity, destinationMandi, totalAmount, grossAmount, mandiTax } = orderData;
 
-    const newOrder: PurchaseOrder = {
-      id: `ord-${Date.now()}`,
-      orderNumber: `PO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+    const newOrderPayload = {
       lotId: crop.id,
       cropTitle: crop.title,
       cropCategory: crop.cropCategory,
@@ -300,39 +280,51 @@ export default function App() {
       farmerName: crop.farmerName,
       fpoName: crop.fpoName,
       farmerPhone: crop.farmerPhone,
-      status: 'escrow_locked',
-      createdAt: new Date().toISOString().split('T')[0],
-      transitPassNo: `MP-TP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
       destinationMandi,
-      weighbridgeWeightQtl: quantity,
     };
 
-    // 1. Optimistic update
-    setOrders((prev) => [newOrder, ...prev]);
-
-    // 2. Persist to Firebase Firestore
     try {
-      await saveOrderToFirestore(newOrder);
-    } catch (err) {
-      console.warn('Firestore save order error', err);
-    }
-
-    // 3. Persist to backend server API
-    try {
-      await fetch('/api/orders', {
+      const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newOrder),
+        body: JSON.stringify(newOrderPayload),
       });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.order) {
+          setOrders((prev) => [json.order, ...prev]);
+        }
+      }
     } catch {
-      // Handled
+      const fallbackOrder: PurchaseOrder = {
+        id: `ord-${Date.now()}`,
+        orderNumber: `PO-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        lotId: crop.id,
+        cropTitle: crop.title,
+        cropCategory: crop.cropCategory,
+        quantityQtl: quantity,
+        pricePerQtl: crop.pricePerQtl,
+        grossAmount,
+        mandiTax,
+        totalAmount,
+        buyerId: user?.id || 'buyer-01',
+        buyerName: user?.name || 'AgroCore Foods Ltd.',
+        farmerName: crop.farmerName,
+        fpoName: crop.fpoName,
+        farmerPhone: crop.farmerPhone,
+        status: 'escrow_locked',
+        createdAt: new Date().toISOString().split('T')[0],
+        transitPassNo: `MP-TP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        destinationMandi,
+      };
+      setOrders((prev) => [fallbackOrder, ...prev]);
     }
 
-    // Decrement local crop quantity and update Firestore
-    const remaining = Math.max(0, crop.batchQuantityQtl - quantity);
+    // Decrement local crop quantity
     setCrops((prev) =>
       prev.map((c) => {
         if (c.id === crop.id) {
+          const remaining = Math.max(0, c.batchQuantityQtl - quantity);
           return {
             ...c,
             batchQuantityQtl: remaining,
@@ -342,16 +334,6 @@ export default function App() {
         return c;
       })
     );
-
-    try {
-      await saveCropLotToFirestore({
-        ...crop,
-        batchQuantityQtl: remaining,
-        status: remaining === 0 ? 'reserved' : 'available',
-      });
-    } catch (err) {
-      console.warn('Firestore crop quantity update error', err);
-    }
 
     // Update buyer balance
     if (user && user.escrowBalance) {
@@ -404,11 +386,16 @@ export default function App() {
         onOpenAuth={handleOpenAuth}
         onLogout={handleLogout}
         onSwitchRole={handleSwitchRole}
+        onOpenWhyChooseUs={() => setIsWhyChooseUsOpen(true)}
         onOpenAddProduce={() => {
-          if (!user || user.role !== 'farmer') {
-            setUser(INITIAL_FARMER_USER);
-            setCurrentView('farmer');
-            setActiveTab('farmer-inventory');
+          if (!user) {
+            handleOpenAuth('farmer');
+            return;
+          }
+          if (user.role !== 'farmer') {
+            showToast('Please sign in with a Farmer / FPO account to list produce.');
+            handleOpenAuth('farmer');
+            return;
           }
           setIsAddCropOpen(true);
         }}
@@ -431,16 +418,21 @@ export default function App() {
             }}
             onOpenPilotCohort={() => setIsPilotCohortOpen(true)}
             onOpenAddProduce={() => {
-              if (!user || user.role !== 'farmer') {
-                setUser(INITIAL_FARMER_USER);
-                setCurrentView('farmer');
-                setActiveTab('farmer-inventory');
+              if (!user) {
+                handleOpenAuth('farmer');
+                return;
+              }
+              if (user.role !== 'farmer') {
+                showToast('Please sign in with a Farmer / FPO account to list produce.');
+                handleOpenAuth('farmer');
+                return;
               }
               setIsAddCropOpen(true);
             }}
             onAcceptBidDemo={() => {
               showToast('Commercial Bid Accepted: ₹2,410/Qtl! Escrow pre-lock contract issued.');
             }}
+            onViewAssayReport={handleViewAssayReport}
           />
         )}
 
@@ -454,6 +446,7 @@ export default function App() {
               onSelectCropForOrder={handleSelectCropForOrder}
               onCallFarmer={handleCallFarmer}
               activeBuyerTab={activeTab}
+              onViewAssayReport={handleViewAssayReport}
             />
           </div>
         )}
@@ -516,6 +509,43 @@ export default function App() {
         onClose={() => setIsPilotCohortOpen(false)}
         onSubmitSuccess={(details) => {
           showToast(`Pilot registration received for ${details.fpoName}! Our team is reviewing.`);
+        }}
+      />
+
+      <WhyChooseUsModal
+        isOpen={isWhyChooseUsOpen}
+        onClose={() => setIsWhyChooseUsOpen(false)}
+        onExploreMarketplace={() => {
+          setIsWhyChooseUsOpen(false);
+          if (!user) {
+            handleOpenAuth('buyer');
+          } else {
+            setCurrentView('buyer');
+            setActiveTab('marketplace');
+          }
+        }}
+        onListProduce={() => {
+          setIsWhyChooseUsOpen(false);
+          if (!user) {
+            handleOpenAuth('farmer');
+            return;
+          }
+          if (user.role !== 'farmer') {
+            showToast('Please sign in with a Farmer / FPO account to list produce.');
+            handleOpenAuth('farmer');
+            return;
+          }
+          setIsAddCropOpen(true);
+        }}
+      />
+
+      <AssayReportModal
+        isOpen={isAssayModalOpen}
+        crop={selectedCropForAssay}
+        onClose={() => setIsAssayModalOpen(false)}
+        onBuyNow={(crop) => {
+          setIsAssayModalOpen(false);
+          handleSelectCropForOrder(crop);
         }}
       />
 

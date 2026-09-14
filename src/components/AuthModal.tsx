@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, UserRole } from '../types';
 import { BRAND_LOGO_URL, INITIAL_BUYER_USER, INITIAL_FARMER_USER } from '../data/initialData';
+import { loginUser } from '../services/authService';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -18,8 +19,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [selectedRole, setSelectedRole] = useState<'buyer' | 'farmer'>(
     initialRole === 'farmer' ? 'farmer' : 'buyer'
   );
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -33,25 +33,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setErrorMsg('');
   };
 
-  const handleVerifyAndLogin = (e?: React.FormEvent) => {
+  const handleVerifyAndLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMsg('');
 
-    if (!name.trim()) {
-      setErrorMsg(
-        selectedRole === 'farmer'
-          ? 'Please enter your name or FPO coordinator identity.'
-          : 'Please enter authorized officer name.'
-      );
-      return;
-    }
-
-    if (!email.trim()) {
-      setErrorMsg(
-        selectedRole === 'farmer'
-          ? 'Please enter your registered mobile number or email.'
-          : 'Please enter your business email.'
-      );
+    if (!identifier.trim()) {
+      setErrorMsg('Please enter your username, email, or registered mobile.');
       return;
     }
 
@@ -60,49 +47,54 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    if (email.toLowerCase().includes('student')) {
-      setErrorMsg(
-        'Student accounts are restricted from institutional trading terminals. Please sign in as a verified FPO/Farmer or Commercial Buyer.'
-      );
-      return;
-    }
-
     setIsVerifying(true);
 
-    setTimeout(() => {
-      setIsVerifying(false);
-      const verifiedUser: User = {
-        id: `${selectedRole}-${Date.now()}`,
-        name: name.trim(),
-        role: selectedRole,
-        orgName:
-          selectedRole === 'farmer'
-            ? `${name.trim()} Kisan FPO Producer Co.`
-            : `${name.trim()} AgroCore Trading Ltd.`,
-        phone: selectedRole === 'farmer' ? (email.match(/^\d+$/) ? email : '+91 98260-44120') : '+91 91234-56789',
-        email: email.trim(),
-        location:
-          selectedRole === 'farmer'
-            ? 'Datoda Agritech Hub, Indore, MP'
-            : 'Indore Central Industrial Area, MP',
-        escrowBalance: selectedRole === 'buyer' ? 4500000 : undefined,
-        verified: true,
-        memberCount: selectedRole === 'farmer' ? 650 : undefined,
-      };
+    try {
+      const result = await loginUser({
+        identifier: identifier.trim(),
+        password: password.trim(),
+        expectedRole: selectedRole,
+      });
 
-      onLoginSuccess(verifiedUser);
+      setIsVerifying(false);
+
+      if (!result.success || !result.user) {
+        setErrorMsg(result.error || 'Incorrect credentials. Please verify and try again.');
+        return;
+      }
+
+      onLoginSuccess(result.user);
       onClose();
-    }, 500);
+    } catch (err: any) {
+      setIsVerifying(false);
+      setErrorMsg(err?.message || 'Authentication error. Please try again.');
+    }
   };
 
-  const handleQuickPreset = (role: 'buyer' | 'farmer') => {
+  const handleQuickPreset = async (role: 'buyer' | 'farmer') => {
     handleRoleChange(role);
-    if (role === 'farmer') {
-      onLoginSuccess(INITIAL_FARMER_USER);
-    } else {
-      onLoginSuccess(INITIAL_BUYER_USER);
+    const demoId = role === 'farmer' ? 'rameshwar' : 'agrocore';
+    const demoPw = 'password123';
+    setIdentifier(demoId);
+    setPassword(demoPw);
+    setIsVerifying(true);
+    try {
+      const result = await loginUser({
+        identifier: demoId,
+        password: demoPw,
+        expectedRole: role,
+      });
+      setIsVerifying(false);
+      if (result.success && result.user) {
+        onLoginSuccess(result.user);
+        onClose();
+      } else {
+        setErrorMsg(result.error || 'Authentication error.');
+      }
+    } catch {
+      setIsVerifying(false);
+      setErrorMsg('Authentication error.');
     }
-    onClose();
   };
 
   return (
@@ -144,10 +136,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="button"
             onClick={() => handleRoleChange('buyer')}
-            className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+            className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all btn-press ${
               selectedRole === 'buyer'
-                ? 'bg-[#063b28] text-white shadow-sm'
-                : 'bg-white text-gray-700 border border-dashed border-blue-400 hover:text-gray-900'
+                ? 'bg-[#063b28] text-white shadow-xs'
+                : 'bg-white text-gray-700 border border-gray-200 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >
             <span className="material-symbols-outlined text-[17px]">storefront</span>
@@ -157,10 +149,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="button"
             onClick={() => handleRoleChange('farmer')}
-            className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+            className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all btn-press ${
               selectedRole === 'farmer'
-                ? 'bg-[#063b28] text-white shadow-sm'
-                : 'bg-white text-gray-700 border border-dashed border-blue-400 hover:text-gray-900'
+                ? 'bg-[#063b28] text-white shadow-xs'
+                : 'bg-white text-gray-700 border border-gray-200 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >
             <span className="material-symbols-outlined text-[17px]">agriculture</span>
@@ -178,71 +170,46 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Form */}
         <form onSubmit={handleVerifyAndLogin} className="space-y-3.5">
-          {/* Field 1: Name */}
+          {/* Field 1: Username / Email / Mobile */}
           <div>
             <div className="flex justify-between items-center mb-1 text-xs">
               <label className="font-bold text-gray-800">
-                {selectedRole === 'farmer' ? 'Farmer / Coordinator Name' : 'Authorized Officer Name'}
+                Username, Work Email, or Mobile
               </label>
               <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                GREETING IDENTITY
+                REQUIRED
               </span>
             </div>
             <div className="relative flex items-center">
               <span className="material-symbols-outlined absolute left-3.5 text-gray-400 text-[18px]">
-                person
+                account_circle
               </span>
               <input
                 type="text"
                 required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 placeholder={
                   selectedRole === 'farmer'
-                    ? 'Enter farmer / coordinator full name'
-                    : 'Enter authorized officer name'
+                    ? 'Username (e.g. rameshwar) or mobile'
+                    : 'Username (e.g. agrocore) or work email'
                 }
                 className="w-full bg-[#f0f3ff] hover:bg-[#e8edff] focus:bg-white text-[#131b2e] rounded-xl px-4 py-2.5 pl-10 text-xs sm:text-sm font-medium border border-transparent focus:border-[#063b28] focus:ring-2 focus:ring-[#063b28]/10 transition-all outline-none"
               />
             </div>
           </div>
 
-          {/* Field 2: Email / Mobile */}
-          <div>
-            <div className="flex justify-between items-center mb-1 text-xs">
-              <label className="font-bold text-gray-800">
-                {selectedRole === 'farmer' ? 'Registered Mobile / ID' : 'Business Email'}
-              </label>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                {selectedRole === 'farmer' ? 'VERIFIED PRODUCER' : 'INSTITUTIONAL'}
-              </span>
-            </div>
-            <div className="relative flex items-center">
-              <span className="material-symbols-outlined absolute left-3.5 text-gray-400 text-[18px]">
-                {selectedRole === 'farmer' ? 'phone_iphone' : 'mail'}
-              </span>
-              <input
-                type={selectedRole === 'farmer' ? 'text' : 'email'}
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={
-                  selectedRole === 'farmer'
-                    ? 'Enter 10-digit mobile number or email'
-                    : 'Enter corporate email (e.g. buyer@company.com)'
-                }
-                className="w-full bg-[#f0f3ff] hover:bg-[#e8edff] focus:bg-white text-[#131b2e] rounded-xl px-4 py-2.5 pl-10 text-xs sm:text-sm font-medium border border-transparent focus:border-[#063b28] focus:ring-2 focus:ring-[#063b28]/10 transition-all outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Field 3: Password */}
+          {/* Field 2: Password */}
           <div>
             <div className="flex justify-between items-center mb-1 text-xs">
               <label className="font-bold text-gray-800">Password</label>
-              <span className="text-[11px] font-bold text-[#a35d1e] cursor-pointer">
+              <button
+                type="button"
+                onClick={() => alert('Demo passwords: password123')}
+                className="text-[11px] font-bold text-[#a35d1e] cursor-pointer"
+              >
                 Forgot password?
-              </span>
+              </button>
             </div>
             <div className="relative flex items-center">
               <span className="material-symbols-outlined absolute left-3.5 text-gray-400 text-[18px]">
@@ -253,7 +220,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
+                placeholder="Enter account password"
                 className="w-full bg-[#f0f3ff] hover:bg-[#e8edff] focus:bg-white text-[#131b2e] rounded-xl px-4 py-2.5 pl-10 pr-10 text-xs sm:text-sm font-mono border border-transparent focus:border-[#063b28] focus:ring-2 focus:ring-[#063b28]/10 transition-all outline-none"
               />
               <button
@@ -289,7 +256,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="submit"
             disabled={isVerifying}
-            className="w-full mt-1.5 h-11 bg-[#063b28] hover:bg-[#0a4d35] text-white font-bold rounded-xl border border-dashed border-blue-400 shadow-md flex items-center justify-center gap-2 text-sm transition-all cursor-pointer disabled:opacity-75"
+            className="w-full mt-1.5 h-11 bg-[#063b28] hover:bg-[#0a4d35] text-white font-bold rounded-xl shadow-xs hover:shadow-sm flex items-center justify-center gap-2 text-sm transition-all cursor-pointer disabled:opacity-75 btn-press btn-shine"
           >
             {isVerifying ? (
               <>

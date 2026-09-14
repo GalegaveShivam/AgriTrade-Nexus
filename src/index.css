@@ -20,13 +20,273 @@
   --font-body: "Inter", sans-serif;
 }
 
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
 body {
   font-family: var(--font-body);
   background-color: var(--color-surface);
   color: #131b2e;
+  overflow-x: hidden;
+}
+
+/* Branded selection highlight */
+::selection {
+  background-color: #c1ecd4;
+  color: #002114;
+}
+
+/* Custom sleek slim scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+/* Focus outline refinement */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #063b28;
+  outline-offset: 2px;
 }
 
 .font-headline {
   font-family: var(--font-headline);
+}
+
+/* Numeric data alignment */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle background ambient mesh pattern for section depth */
+.bg-ambient-pattern {
+  background-image: radial-gradient(rgba(6, 59, 40, 0.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Organic Agricultural Field Contour & Terrace Ambient Patterns */
+.bg-agri-terrace {
+  background-color: #f7faf7;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(6, 59, 40, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(163, 93, 30, 0.04) 0%, transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(247, 250, 247, 0.98) 100%);
+}
+
+.bg-agri-field-lines {
+  background-image: 
+    repeating-linear-gradient(
+      -45deg,
+      rgba(6, 59, 40, 0.015),
+      rgba(6, 59, 40, 0.015) 2px,
+      transparent 2px,
+      transparent 28px
+    );
+}
+
+.bg-soil-warmth {
+  background-color: #fbfbfa;
+}
+
+/* Refined clean card elevation */
+.clean-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.clean-card:hover {
+  border-color: rgba(6, 59, 40, 0.18);
+  box-shadow: 0 4px 16px -2px rgba(6, 59, 40, 0.07), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+}
+
+/* ==========================================================================
+   Clean, Tactile Button Animations & Hover Physics
+   ========================================================================== */
+
+/* Universal Button baseline smoothness */
+button,
+a[role="button"] {
+  transition: 
+    color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.18s ease;
+  will-change: transform, box-shadow;
+}
+
+/* Clean Micro-lift for action buttons on hover */
+button:not(:disabled):not(.no-lift):hover,
+a[role="button"]:not(:disabled):not(.no-lift):hover {
+  transform: translateY(-1.5px);
+}
+
+/* Primary Forest Green Buttons: Rich emerald hover glow */
+button[class*="bg-[#063b28]"]:not(:disabled):hover,
+button[class*="bg-[#1b4332]"]:not(:disabled):hover,
+button[class*="bg-emerald-"]:not(:disabled):hover,
+.btn-primary:not(:disabled):hover {
+  box-shadow: 0 6px 20px -3px rgba(6, 59, 40, 0.28), 0 2px 6px -1px rgba(6, 59, 40, 0.16);
+  filter: brightness(1.05);
+}
+
+/* White & Light Card Buttons: Crisp elevation bloom on hover */
+button[class*="bg-white"]:not(:disabled):not(.no-lift):hover,
+button[class*="bg-gray-50"]:not(:disabled):not(.no-lift):hover,
+.btn-secondary:not(:disabled):hover {
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+  border-color: rgba(6, 59, 40, 0.2);
+}
+
+/* Flat horizontal navigation items remain seated cleanly */
+nav button:not(:disabled):hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Tactile Micro-Press on click */
+button:not(:disabled):active,
+a[role="button"]:not(:disabled):active,
+.btn-press:active {
+  transform: translateY(0.5px) scale(0.982) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  transition-duration: 0.08s;
+}
+
+/* Disabled buttons stay completely steady */
+button:disabled {
+  transform: none !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* Clean icon hover micro-motion inside buttons */
+button:not(:disabled) .material-symbols-outlined,
+button:not(:disabled) svg {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Leading icons gently scale on button hover */
+button:not(:disabled):hover .material-symbols-outlined:first-child:not(:last-child) {
+  transform: scale(1.1);
+}
+
+/* Trailing arrow icons gently nudge forward on button hover */
+button:not(:disabled):hover .material-symbols-outlined:last-child:not(:first-child) {
+  transform: translateX(2.5px);
+}
+
+/* Premium Light Shimmer Sweep Effect */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+
+.btn-shine:hover::after {
+  left: 150%;
+}
+
+/* Subtle pulse dot */
+@keyframes soft-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.92);
+  }
+}
+
+.animate-soft-pulse {
+  animation: soft-pulse 2.5s ease-in-out infinite;
+}
+
+/* Glass Floating Scroll Navigation */
+.floating-glass-bar {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(6, 59, 40, 0.14);
+  box-shadow: 0 10px 30px -5px rgba(6, 59, 40, 0.12), 0 4px 10px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Seamless Tab Transition */
+.tab-pill-active {
+  background: #063b28;
+  color: #ffffff;
+  box-shadow: 0 2px 8px -1px rgba(6, 59, 40, 0.35);
+}
+
+.tab-pill-inactive {
+  color: #4b5563;
+  background: transparent;
+}
+
+.tab-pill-inactive:hover {
+  color: #111827;
+  background: rgba(6, 59, 40, 0.05);
+}
+
+/* Subtle scroll snapping for section clarity */
+.scroll-section-target {
+  scroll-margin-top: 5.5rem;
+}
+
+/* Crop image hover bloom */
+.crop-card-image {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease;
+}
+
+.crop-card:hover .crop-card-image {
+  transform: scale(1.08);
+  filter: saturate(1.1);
 }
 

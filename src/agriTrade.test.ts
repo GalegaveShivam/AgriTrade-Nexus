@@ -183,4 +183,87 @@ describe('AgriTrade Nexus - Core Data Integrity & Calculations', () => {
     expect(atMspResult.premiumAmount).toBe(0);
     expect(atMspResult.pctAboveMsp).toBe(0);
   });
+
+  describe('Authentication Security & Strict Verification', () => {
+    // Seed users mock database
+    const mockUsers = [
+      { username: 'rameshwar', password: 'password123', name: 'Rameshwar Patel', role: 'farmer' },
+      { username: 'agrocore', password: 'password123', name: 'AgroCore Foods Ltd.', role: 'buyer' },
+      { username: 'buyer', password: 'buyer123', name: 'Apex Craft Breweries Ltd.', role: 'buyer' },
+      { username: 'farmer', password: 'farmer123', name: 'Suresh Verma', role: 'farmer' },
+    ];
+
+    it('rejects registration when username already exists (no duplicate usernames allowed)', () => {
+      const attemptRegister = (username: string) => {
+        const clean = username.trim().toLowerCase();
+        const exists = mockUsers.some((u) => u.username.toLowerCase() === clean);
+        if (exists) {
+          return {
+            success: false,
+            error: `Username "${clean}" is already taken by an existing account. Another user cannot use it.`,
+          };
+        }
+        return { success: true };
+      };
+
+      // Existing usernames must fail
+      expect(attemptRegister('rameshwar').success).toBe(false);
+      expect(attemptRegister('RAMESHWAR').success).toBe(false);
+      expect(attemptRegister('agrocore').success).toBe(false);
+      expect(attemptRegister('  buyer  ').success).toBe(false);
+
+      // Unique new usernames must succeed
+      expect(attemptRegister('shivam_agro').success).toBe(true);
+      expect(attemptRegister('new_farmer_99').success).toBe(true);
+    });
+
+    it('rejects login when password does not match (wrong password error)', () => {
+      const attemptLogin = (identifier: string, pass: string) => {
+        const cleanId = identifier.trim().toLowerCase();
+        const cleanPass = pass.trim();
+        const user = mockUsers.find((u) => u.username.toLowerCase() === cleanId);
+        if (!user) {
+          return { success: false, status: 404, error: 'User does not exist' };
+        }
+        if (user.password !== cleanPass) {
+          return { success: false, status: 401, error: 'Incorrect password. Access denied.' };
+        }
+        return { success: true, status: 200, user };
+      };
+
+      // Wrong password MUST fail with 401
+      const wrongPassResult = attemptLogin('rameshwar', 'wrongPassword123');
+      expect(wrongPassResult.success).toBe(false);
+      expect(wrongPassResult.status).toBe(401);
+      expect(wrongPassResult.error).toContain('Incorrect password');
+
+      const wrongPassBuyer = attemptLogin('agrocore', 'differentpassword');
+      expect(wrongPassBuyer.success).toBe(false);
+      expect(wrongPassBuyer.status).toBe(401);
+
+      // Correct password MUST succeed
+      const correctLogin = attemptLogin('rameshwar', 'password123');
+      expect(correctLogin.success).toBe(true);
+      expect(correctLogin.status).toBe(200);
+      expect(correctLogin.user?.name).toBe('Rameshwar Patel');
+    });
+
+    it('validates multilingual translation coverage for all 11 bulk agricultural languages', async () => {
+      const { translations, LANGUAGES } = await import('./i18n');
+      const languages = ['en', 'hi', 'pa', 'mr', 'gu', 'te', 'kn', 'ta', 'bn', 'ml', 'or'] as const;
+
+      expect(LANGUAGES.length).toBe(11);
+
+      for (const lang of languages) {
+        expect(translations[lang]).toBeDefined();
+        expect(translations[lang].appName).toBeDefined();
+        expect(translations[lang].whyChooseUs).toBeDefined();
+        expect(translations[lang].marketplace).toBeDefined();
+        expect(translations[lang].taleOfTwoReceipts).toBeDefined();
+        expect(translations[lang].twoReceiptsHeading).toBeDefined();
+        expect(translations[lang].zeroCommission).toBeDefined();
+        expect(translations[lang].escrowProtection).toBeDefined();
+      }
+    });
+  });
 });

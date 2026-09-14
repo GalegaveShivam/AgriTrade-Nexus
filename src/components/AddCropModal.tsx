@@ -316,13 +316,13 @@ export const AddCropModal: React.FC<AddCropModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-[#414844] hover:bg-gray-100 rounded-xl"
+              className="px-4 py-2 text-xs font-semibold text-[#414844] hover:bg-gray-100 rounded-xl btn-press"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="h-11 px-6 bg-[#1b4332] hover:bg-[#2d6a4f] text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-2"
+              className="h-11 px-6 bg-[#1b4332] hover:bg-[#2d6a4f] text-white text-xs font-bold rounded-xl shadow-xs hover:shadow-sm flex items-center gap-2 btn-press"
             >
               <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
               <span>Publish Batch Listing</span>

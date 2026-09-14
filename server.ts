@@ -1,10 +1,7 @@
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 interface CropRecord {
   id: string;
@@ -290,6 +287,119 @@ let ordersDatabase: OrderRecord[] = [
   },
 ];
 
+interface AuthUser {
+  id: string;
+  username: string;
+  password: string;
+  name: string;
+  role: 'buyer' | 'farmer';
+  orgName: string;
+  phone: string;
+  email: string;
+  location: string;
+  escrowBalance?: number;
+  verified: boolean;
+  memberCount?: number;
+}
+
+const USERS_FILE_PATH = path.join(process.cwd(), 'src/data/users.json');
+
+const SEED_USERS: AuthUser[] = [
+  {
+    id: 'buyer-01',
+    username: 'agrocore',
+    password: 'password123',
+    name: 'AgroCore Foods Ltd.',
+    role: 'buyer',
+    orgName: 'AgroCore Foods Ltd.',
+    phone: '+91 91234-56789',
+    email: 'procurement@agrocore.com',
+    location: 'Indore Central Industrial Area, MP',
+    escrowBalance: 4500000,
+    verified: true,
+  },
+  {
+    id: 'farmer-01',
+    username: 'rameshwar',
+    password: 'password123',
+    name: 'Rameshwar Patel',
+    role: 'farmer',
+    orgName: 'Malwa Kisan FPO',
+    phone: '+91 98260-44120',
+    email: 'rameshwar.patel@malwafpo.in',
+    location: 'Gram Datoda Hub #4, Indore, MP',
+    verified: true,
+    memberCount: 850,
+  },
+  {
+    id: 'buyer-02',
+    username: 'buyer',
+    password: 'buyer123',
+    name: 'Apex Craft Breweries Ltd.',
+    role: 'buyer',
+    orgName: 'Apex Craft Maltsters',
+    phone: '+91 99887-66554',
+    email: 'trade@apexmalt.com',
+    location: 'Bhopal Agro Complex, MP',
+    escrowBalance: 3200000,
+    verified: true,
+  },
+  {
+    id: 'farmer-02',
+    username: 'farmer',
+    password: 'farmer123',
+    name: 'Suresh Verma',
+    role: 'farmer',
+    orgName: 'Nimar Agro Farmer Producer Co.',
+    phone: '+91 97551-88932',
+    email: 'suresh.verma@nimarfpo.in',
+    location: 'Ujjain Central Agro Hub, MP',
+    verified: true,
+    memberCount: 420,
+  },
+];
+
+function loadUsersFromDisk(): AuthUser[] {
+  try {
+    if (fs.existsSync(USERS_FILE_PATH)) {
+      const raw = fs.readFileSync(USERS_FILE_PATH, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Ensure initial seeds exist in the list
+        const list = [...parsed];
+        let changed = false;
+        for (const seed of SEED_USERS) {
+          if (!list.some((u) => u.username.toLowerCase() === seed.username.toLowerCase())) {
+            list.push(seed);
+            changed = true;
+          }
+        }
+        if (changed) {
+          saveUsersToDisk(list);
+        }
+        return list;
+      }
+    }
+  } catch (err) {
+    console.error('Error reading users from disk:', err);
+  }
+  // Initialize file with seed users if not found or corrupted
+  saveUsersToDisk(SEED_USERS);
+  return [...SEED_USERS];
+}
+
+function saveUsersToDisk(users: AuthUser[]): void {
+  try {
+    const dir = path.dirname(USERS_FILE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(USERS_FILE_PATH, JSON.stringify(users, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving users to disk:', err);
+  }
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -301,43 +411,162 @@ async function startServer() {
     res.json({ status: 'ok', service: 'AgriTrade Nexus API' });
   });
 
-  // Auth endpoint (simulates secure tokenized login & role identification)
-  app.post('/api/auth/login', (req, res) => {
-    const { role, email, phone, name } = req.body;
-    if (role === 'farmer') {
-      return res.json({
-        success: true,
-        user: {
-          id: 'farmer-01',
-          name: name || 'Rameshwar Patel',
-          role: 'farmer',
-          orgName: 'Malwa Kisan FPO',
-          phone: phone || '+91 98260-44120',
-          email: email || 'rameshwar.patel@malwafpo.in',
-          location: 'Gram Datoda Hub #4, Indore, MP',
-          verified: true,
-          memberCount: 850,
-        },
-        token: 'nexus_jwt_farmer_' + Date.now(),
-      });
-    } else {
-      // Default to Buyer
-      return res.json({
-        success: true,
-        user: {
-          id: 'buyer-01',
-          name: name || 'AgroCore Foods Ltd.',
-          role: 'buyer',
-          orgName: 'AgroCore Foods Ltd.',
-          phone: phone || '+91 91234-56789',
-          email: email || 'procurement@agrocore.com',
-          location: 'Indore Central Industrial Area, MP',
-          escrowBalance: 4500000,
-          verified: true,
-        },
-        token: 'nexus_jwt_buyer_' + Date.now(),
+  // Check username availability endpoint
+  app.get('/api/auth/check-username', (req, res) => {
+    const rawUsername = String(req.query.username || '').trim().toLowerCase();
+    if (!rawUsername) {
+      return res.status(400).json({ success: false, available: false, message: 'Username is required' });
+    }
+    const currentUsers = loadUsersFromDisk();
+    const exists = currentUsers.some((u) => u.username.toLowerCase() === rawUsername);
+    return res.json({ success: true, username: rawUsername, available: !exists });
+  });
+
+  // Register endpoint with strict username uniqueness enforcement
+  app.post('/api/auth/register', (req, res) => {
+    const { username, password, name, role, orgName, phone, email, location } = req.body;
+
+    const cleanUsername = String(username || '').trim().toLowerCase();
+    const cleanPassword = String(password || '').trim();
+    const cleanName = String(name || '').trim();
+    const cleanEmail = String(email || '').trim().toLowerCase();
+
+    if (!cleanUsername) {
+      return res.status(400).json({ success: false, message: 'Username is required.' });
+    }
+    if (cleanUsername.length < 3) {
+      return res.status(400).json({ success: false, message: 'Username must be at least 3 characters long.' });
+    }
+    if (!/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username can only contain letters, numbers, underscores, dots, or hyphens (no spaces).',
       });
     }
+    if (!cleanPassword || cleanPassword.length < 4) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 4 characters long.' });
+    }
+    if (!cleanName) {
+      return res.status(400).json({ success: false, message: 'Full name is required.' });
+    }
+
+    const currentUsers = loadUsersFromDisk();
+
+    // STRICT CHECK: Does username already exist? If so, REJECT WITH 409 CONFLICT
+    const existingUser = currentUsers.find((u) => u.username.toLowerCase() === cleanUsername);
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: `Username "${cleanUsername}" is already taken by an existing account. Please choose a different username or sign in with your password.`,
+      });
+    }
+
+    // Check email uniqueness if email provided
+    if (cleanEmail && cleanEmail.includes('@')) {
+      const existingEmail = currentUsers.find((u) => u.email.toLowerCase() === cleanEmail);
+      if (existingEmail) {
+        return res.status(409).json({
+          success: false,
+          message: `Email "${cleanEmail}" is already registered. Please sign in or use a different email.`,
+        });
+      }
+    }
+
+    const assignedRole: 'buyer' | 'farmer' = role === 'farmer' ? 'farmer' : 'buyer';
+    const newUser: AuthUser = {
+      id: `${assignedRole}-${Date.now()}`,
+      username: cleanUsername,
+      password: cleanPassword,
+      name: cleanName,
+      role: assignedRole,
+      orgName:
+        orgName?.trim() ||
+        (assignedRole === 'farmer'
+          ? `${cleanName} Kisan FPO Producer Co.`
+          : `${cleanName} Agro Trading Ltd.`),
+      phone: phone?.trim() || '+91 98765-43210',
+      email: cleanEmail || `${cleanUsername}@agritrade.internal`,
+      location:
+        location?.trim() ||
+        (assignedRole === 'farmer'
+          ? 'Datoda Agritech Hub, Indore, MP'
+          : 'Indore Central Industrial Area, MP'),
+      escrowBalance: assignedRole === 'buyer' ? 4500000 : undefined,
+      verified: true,
+      memberCount: assignedRole === 'farmer' ? 500 : undefined,
+    };
+
+    currentUsers.push(newUser);
+    saveUsersToDisk(currentUsers);
+
+    // Return safe user object without password
+    const { password: _, ...safeUser } = newUser;
+    return res.status(201).json({
+      success: true,
+      user: safeUser,
+      token: `nexus_jwt_${newUser.id}_${Date.now()}`,
+    });
+  });
+
+  // Login endpoint with strict password check and username lookup
+  app.post('/api/auth/login', (req, res) => {
+    const { identifier, username, email, password } = req.body;
+    const query = String(identifier || username || email || '').trim().toLowerCase();
+    const cleanPassword = String(password || '').trim();
+
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter your username, email, or registered phone number.',
+      });
+    }
+    if (!cleanPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter your password.',
+      });
+    }
+
+    const currentUsers = loadUsersFromDisk();
+
+    // STRICT MATCHING: Only exact username, valid email, or complete 10-digit phone
+    let matchedUser = currentUsers.find((u) => u.username.toLowerCase() === query);
+
+    if (!matchedUser && query.includes('@')) {
+      matchedUser = currentUsers.find((u) => u.email.toLowerCase() === query);
+    }
+
+    const queryDigits = query.replace(/\D/g, '');
+    if (!matchedUser && queryDigits.length >= 10) {
+      matchedUser = currentUsers.find((u) => {
+        const uDigits = u.phone.replace(/\D/g, '');
+        return uDigits.length >= 10 && (uDigits.endsWith(queryDigits) || queryDigits.endsWith(uDigits));
+      });
+    }
+
+    // STRICT CHECK 1: Account does not exist
+    if (!matchedUser) {
+      return res.status(404).json({
+        success: false,
+        message: `No account exists with username "${query}". Please check your username or register a new account.`,
+      });
+    }
+
+    // STRICT CHECK 2: User exists, check password!
+    if (matchedUser.password !== cleanPassword) {
+      return res.status(401).json({
+        success: false,
+        message: `Incorrect password for username "${matchedUser.username}". Access denied.`,
+      });
+    }
+
+    // Case 3: Credentials match! Return safe user info and auth token
+    const { password: _, ...safeUser } = matchedUser;
+    return res.json({
+      success: true,
+      user: safeUser,
+      token: `nexus_jwt_${matchedUser.id}_${Date.now()}`,
+    });
   });
 
   // Crops endpoints

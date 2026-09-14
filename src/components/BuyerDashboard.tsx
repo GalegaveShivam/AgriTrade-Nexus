@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { CropCategory, CropLot, MandiPriceItem, PurchaseOrder, SourceType, User } from '../types';
+import { useLanguage } from '../i18n';
+import { audioAssistant } from '../utils/audioAssistant';
 
 interface BuyerDashboardProps {
   buyer: User | null;
@@ -9,6 +11,7 @@ interface BuyerDashboardProps {
   onSelectCropForOrder: (crop: CropLot, quantity?: number) => void;
   onCallFarmer: (crop: CropLot) => void;
   activeBuyerTab: string;
+  onViewAssayReport?: (crop: CropLot) => void;
 }
 
 export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({
@@ -19,7 +22,9 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({
   onSelectCropForOrder,
   onCallFarmer,
   activeBuyerTab,
+  onViewAssayReport,
 }) => {
+  const { language } = useLanguage();
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [pickupFilter, setPickupFilter] = useState<'all' | 'farmgate' | 'hub'>('all');
@@ -28,6 +33,16 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({
   const [filterOrganic, setFilterOrganic] = useState(false);
   const [filterGrade1, setFilterGrade1] = useState(false);
   const [filterLowMoisture, setFilterLowMoisture] = useState(false);
+
+  // Audio readout handler for a crop lot
+  const handleAudioListenCrop = (crop: CropLot) => {
+    const isHindi = language === 'hi';
+    const text = isHindi
+      ? `${crop.title}। कुल मात्रा ${crop.batchQuantityQtl} क्विंटल। दर ₹${crop.pricePerQtl} प्रति क्विंटल। नमी ${crop.moisturePct} प्रतिशत। उत्पादक ${crop.farmerName}, ${crop.fpoName}, ${crop.location}।`
+      : `${crop.title}. Lot size ${crop.batchQuantityQtl} quintals. Price ₹${crop.pricePerQtl} per quintal. Moisture ${crop.moisturePct} percent. Offered by ${crop.farmerName}, ${crop.fpoName} in ${crop.location}.`;
+
+    audioAssistant.speak(text, isHindi ? 'hi-IN' : 'en-IN');
+  };
 
   // Calculator State
   const [calcCropRate, setCalcCropRate] = useState<number>(2420);
@@ -316,7 +331,7 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({
                 <div className="flex items-center flex-wrap gap-2 text-[11px] text-[#3f6653] uppercase tracking-wider font-bold">
                   <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#c1ecd4]/80 text-[#002114]">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#1b4332] animate-pulse"></span>
-                    <span>{timeSlot} • Rabi Procurement Active</span>
+                    <span>{timeSlot} • High Spot Demand Active</span>
                   </span>
                   <span className="text-gray-300">•</span>
                   <span>Central India Mandi Grid</span>
@@ -757,6 +772,31 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({
                               </span>
                             </div>
                           </div>
+                        </div>
+
+                        {/* Lab Assay & Audio Inspection Bar */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onViewAssayReport && onViewAssayReport(crop)}
+                            className="flex-1 py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#063b28] border border-emerald-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[16px] text-emerald-700">biotech</span>
+                            <span className="truncate">NABL Lab Assay Report</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAudioListenCrop(crop);
+                            }}
+                            className="h-8 px-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 text-xs font-bold flex items-center gap-1 transition-colors shadow-2xs"
+                            title="Listen to lot summary in voice"
+                          >
+                            <span className="material-symbols-outlined text-[16px] text-emerald-700">volume_up</span>
+                            <span className="hidden sm:inline">Audio</span>
+                          </button>
                         </div>
 
                         {/* Working Interactive Action Buttons */}

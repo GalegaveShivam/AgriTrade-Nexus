@@ -1,6 +1,8 @@
 {
   "name": "AgriTrade Nexus - No Middleman Direct Farmer-to-Buyer Marketplace",
-  "description": "B2B agricultural commodity marketplace connecting farmers and FPOs directly to institutional buyers with zero middleman commissions, live Mandi rates, and escrow settlement.",
+  "description": "Direct agricultural commodity marketplace connecting farmers and FPOs directly to institutional buyers with zero middleman commissions, live Mandi rates, and escrow settlement.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
